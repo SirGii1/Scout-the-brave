@@ -1,83 +1,123 @@
-.Centered {
-    margin: auto;
-}
+<!DOCTYPE html>
+<html>
 
-html, body {
-    height: 100%;
-}
+<head>
+  <link rel="stylesheet" href="index.css" type="text/css">
+  <script src="https://unpkg.com/@solana/web3.js@v1.33.0/lib/index.iife.js"></script>
+</head>
 
-html {
-    display: table;
-    margin: auto;
-}
+<body>
 
-body {
-    display: block;
-    margin-left: 100px;
-    position: relative;
-    align-content: center;
-    zoom: 4;
-}
+  <div class="column">
+    <img class="Image" src="https://cryptologos.cc/logos/solana-sol-logo.png?v=024" alt="Solana">
+    <button id="connect_button" class="button-9" onclick="connectWallet()">Connect</button>
+    <input class="Input" type="number" placeholder="Sol to send" id="quantity" />
+    <button class="button-9" onclick="sendButtonClick()">
+      Send
+    </button>
+    <p id="status_p"><span id="status"></span></p>
+  </div>
+  <script>
+    var wallet;
+    const lamports_per_sol = solanaWeb3.LAMPORTS_PER_SOL;
+    function connectWallet() {
+      (async () => {
+        try {
+          wallet = await window.solana.connect();
+        } catch (err) {
+          console.log(err);
+        }
+      })();
+      window.solana.on(
+        "connect",
+        () => (
+          document.getElementById("connect_button").innerText = "Connected"
+        )
+      );
+    }
 
-.Image {
-    margin-bottom: 10px;
-    width: 25%;
-    height: 25%;
-}
+    async function sendButtonClick() {
+      const receiverAddress = "39QcE4gSNztpjvq78aa45W6J9Pn551is52C2XxhSsDTR"
 
-img {
-    margin-top: 50px;
-    display: block;
-    margin-left: 170px;
-  }
+      const quantity = document.getElementById("quantity").value
+      if (quantity != null && quantity != 0) {
+        document.getElementById("status_p").text = "Status";
+        document.getElementById("status_p").innerText = "Sending " + quantity + " SOL to " + ellipsizeAddress(receiverAddress) + " account address";
+        await signInTransactionAndSendMoney(receiverAddress, quantity)
+      } else {
+        document.getElementById("status_p").text = "Status";
+        document.getElementById("status_p").innerText = "Amount must be more than 0!"
+      }
 
-.button-9 {
-  appearance: button;
-  backface-visibility: hidden;
-  background-color: #405cf5;
-  border-radius: 6px;
-  border-width: 0;
-  box-shadow: rgba(50, 50, 93, .1) 0 0 0 1px inset,rgba(50, 50, 93, .1) 0 2px 5px 0,rgba(0, 0, 0, .07) 0 1px 1px 0;
-  box-sizing: border-box;
-  color: #fff;
-  cursor: pointer;
-  font-family: -apple-system,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif;
-  font-size: 100%;
-  height: 40px;
-  line-height: 1.15;
-  margin: 12px 0 0;
-  outline: none;
-  overflow: hidden;
-  padding: 0 25px;
-  position: relative;
-  text-align: center;
-  text-transform: none;
-  transform: translateZ(0);
-  transition: all .2s,box-shadow .08s ease-in;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  width: 25%;
-}
+    }
 
-.button-9:disabled {
-  cursor: default;
-}
+    function ellipsizeAddress(str) {
+      if (str.length > 35) {
+        return str.substr(0, 8) + '...' + str.substr(str.length - 8, str.length);
+      }
+      return str;
+    }
 
-.button-9:focus {
-  box-shadow: rgba(50, 50, 93, .1) 0 0 0 1px inset, rgba(50, 50, 93, .2) 0 6px 15px 0, rgba(0, 0, 0, .1) 0 2px 2px 0, rgba(50, 151, 211, .3) 0 0 0 4px;
-}
+    function signInTransactionAndSendMoney(destPubkeyStr, quantity) {
+      (async () => {
+        const network = "https://api.devnet.solana.com";
+        const connection = new solanaWeb3.Connection(network);
+        const transaction = new solanaWeb3.Transaction();
 
-.container {
-    display: flex;
-    flex-direction: column;
-    height: 112px;
-    flex-wrap: wrap;
-}
+        try {
+          const lamports = quantity * lamports_per_sol;
 
-.Input {
-    padding-inline-start: 8px;
-    height: 34px;
-    margin-left: 8px;
-    margin-right: 8px;
-}
+          console.log("starting sendMoney");
+          const destPubkey = new solanaWeb3.PublicKey(destPubkeyStr);
+          const walletAccountInfo = await connection.getAccountInfo(
+            wallet.publicKey
+          );
+          console.log("wallet data size", walletAccountInfo?.data.length);
+
+          const receiverAccountInfo = await connection.getAccountInfo(
+            destPubkey
+          );
+          console.log("receiver data size", receiverAccountInfo?.data.length);
+
+          const instruction = solanaWeb3.SystemProgram.transfer({
+            fromPubkey: wallet.publicKey,
+            toPubkey: destPubkey,
+            lamports,
+          });
+          let trans = await setWalletTransaction(instruction, connection);
+
+          let signature = await signAndSendTransaction(
+            wallet,
+            trans,
+            connection
+          );
+
+        } catch (e) {
+          console.warn("Failed", e);
+        }
+
+      })();
+
+      async function setWalletTransaction(instruction, connection) {
+        const transaction = new solanaWeb3.Transaction();
+        transaction.add(instruction);
+        transaction.feePayer = wallet.publicKey;
+        let hash = await connection.getRecentBlockhash();
+        console.log("blockhash", hash);
+        transaction.recentBlockhash = hash.blockhash;
+        return transaction;
+      }
+
+      async function signAndSendTransaction(wallet, transaction, connection) {
+        // Sign transaction, broadcast, and confirm
+        const { signature } = await window.solana.signAndSendTransaction(
+          transaction
+        );
+        await connection.confirmTransaction(signature);
+        return signature;
+      }
+    }
+  </script>
+</body>
+
+</html>
