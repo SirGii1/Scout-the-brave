@@ -3,659 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SolTrending - Boost Your Token</title>
+    <title>SolTrend - Token Trending Service</title>
+    <link rel="stylesheet" href="css/styles.css">
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script src="https://unpkg.com/@solana/wallet-adapter-base@latest/lib/esm/index.min.js"></script>
     <script src="https://unpkg.com/@solana/wallet-adapter-react@latest/lib/esm/index.min.js"></script>
-    <style>
-        :root {
-            --primary: #9945FF;
-            --secondary: #14F195;
-            --dark: #121212;
-            --light: #f5f5f5;
-            --gray: #2a2a2a;
-            --card-bg: #1e1e1e;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            color: var(--light);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 30px;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .logo-icon {
-            background: var(--primary);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 20px;
-        }
-        
-        .logo h1 {
-            font-size: 28px;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .wallet-section {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-        
-        .wallet-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .wallet-icon {
-            background: var(--primary);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .wallet-details {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .wallet-details .status {
-            font-size: 14px;
-            color: #aaa;
-        }
-        
-        .wallet-details .balance {
-            font-weight: bold;
-            font-size: 18px;
-        }
-        
-        .connect-btn {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 30px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .connect-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(153, 69, 255, 0.4);
-        }
-        
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-top: 30px;
-        }
-        
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-        
-        .card-title {
-            font-size: 22px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .card-title::before {
-            content: "";
-            display: block;
-            width: 8px;
-            height: 25px;
-            background: linear-gradient(to bottom, var(--primary), var(--secondary));
-            border-radius: 4px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        
-        input, select {
-            width: 100%;
-            padding: 14px;
-            border-radius: 8px;
-            background: var(--gray);
-            border: 1px solid #333;
-            color: white;
-            font-size: 16px;
-        }
-        
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-        
-        .price-card {
-            background: rgba(153, 69, 255, 0.1);
-            border: 1px solid var(--primary);
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        
-        .price-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .price-title {
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .price-value {
-            font-size: 24px;
-            font-weight: bold;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .price-list {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-        }
-        
-        .price-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .price-item.selected {
-            background: rgba(153, 69, 255, 0.2);
-            border: 1px solid var(--primary);
-        }
-        
-        .price-item h4 {
-            margin-bottom: 5px;
-            color: var(--secondary);
-        }
-        
-        .price-item p {
-            font-weight: bold;
-            font-size: 18px;
-        }
-        
-        .pay-btn {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        .pay-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(153, 69, 255, 0.4);
-        }
-        
-        .pay-btn:disabled {
-            background: #555;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
-            border-radius: 8px;
-            background: var(--card-bg);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            transform: translateX(200%);
-            transition: transform 0.3s ease;
-            z-index: 1000;
-        }
-        
-        .notification.show {
-            transform: translateX(0);
-        }
-        
-        .notification.success {
-            border-left: 4px solid var(--secondary);
-        }
-        
-        .notification.error {
-            border-left: 4px solid #ff4d4d;
-        }
-        
-        footer {
-            text-align: center;
-            padding: 30px 0;
-            margin-top: 50px;
-            color: #aaa;
-            font-size: 14px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .disclaimer {
-            background: rgba(255, 77, 77, 0.1);
-            border: 1px solid #ff4d4d;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-    </style>
+    <script src="https://unpkg.com/@solana/wallet-adapter-wallets@latest/lib/esm/index.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo">
-                <div class="logo-icon">S</div>
-                <h1>SolTrending</h1>
-            </div>
+    <header>
+        <div class="container">
+            <h1>SolTrend</h1>
             <div class="wallet-section">
-                <div class="wallet-info">
-                    <div class="wallet-icon">⚡</div>
-                    <div class="wallet-details">
-                        <span class="status" id="wallet-status">Wallet not connected</span>
-                        <span class="balance" id="wallet-balance">-- SOL</span>
+                <button id="connectWallet" class="btn">Connect Wallet</button>
+                <div id="walletInfo" class="wallet-info">
+                    <span id="balance">Balance: -- SOL</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h2>Boost Your Token to Trending Lists</h2>
+            <p>Get your Solana token featured on top trending lists with our professional service</p>
+        </section>
+
+        <section class="token-form">
+            <h3>Submit Your Token</h3>
+            <form id="tokenForm">
+                <div class="form-group">
+                    <label for="tokenAddress">Token Contract Address:</label>
+                    <input type="text" id="tokenAddress" placeholder="Enter your token contract address" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Select Trending List:</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="trendingList" value="top15" checked>
+                            Top 15 Trending
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="trendingList" value="top7">
+                            Top 7 Trending (More Effective)
+                        </label>
                     </div>
                 </div>
-                <button class="connect-btn" id="connect-wallet">Connect Wallet</button>
-            </div>
-        </header>
-        
-        <div class="main-content">
-            <div class="card">
-                <h2 class="card-title">Token Information</h2>
+
                 <div class="form-group">
-                    <label for="token-address">Token Contract Address</label>
-                    <input type="text" id="token-address" placeholder="Enter your token contract address">
-                </div>
-                
-                <div class="form-group">
-                    <label>Select Trending Tier</label>
-                    <select id="trending-tier">
-                        <option value="top15">Top 15 Trending (More Affordable)</option>
-                        <option value="top7">Top 7 Trending (Higher Visibility)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Select Duration</label>
-                    <select id="duration">
+                    <label for="duration">Duration:</label>
+                    <select id="duration" required>
+                        <option value="">Select duration</option>
                         <option value="4">4 Hours</option>
                         <option value="8">8 Hours</option>
                         <option value="16">16 Hours</option>
                         <option value="24">24 Hours</option>
                     </select>
                 </div>
-                
-                <div class="price-card">
-                    <div class="price-header">
-                        <div class="price-title">Selected Plan</div>
-                        <div class="price-value" id="total-price">1.0 SOL</div>
-                    </div>
-                    
-                    <div class="price-list">
-                        <div class="price-item" data-tier="top15" data-duration="4">
-                            <h4>Top 15</h4>
-                            <p>1.0 SOL</p>
-                            <span>4 Hours</span>
-                        </div>
-                        <div class="price-item" data-tier="top15" data-duration="8">
-                            <h4>Top 15</h4>
-                            <p>1.7 SOL</p>
-                            <span>8 Hours</span>
-                        </div>
-                        <div class="price-item" data-tier="top15" data-duration="16">
-                            <h4>Top 15</h4>
-                            <p>4.1 SOL</p>
-                            <span>16 Hours</span>
-                        </div>
-                        <div class="price-item" data-tier="top15" data-duration="24">
-                            <h4>Top 15</h4>
-                            <p>5.2 SOL</p>
-                            <span>24 Hours</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <button class="pay-btn" id="pay-button" disabled>Connect Wallet to Pay</button>
-                
-                <div class="disclaimer">
-                    <strong>Disclaimer:</strong> By using this service, you agree that all payments are non-refundable. 
-                    The developer will manually review and activate your boost after payment confirmation.
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2 class="card-title">How It Works</h2>
-                <div style="margin-top: 20px;">
-                    <div style="display: flex; gap: 15px; margin-bottom: 25px;">
-                        <div style="background: var(--primary); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">1</div>
-                        <div>
-                            <h3>Connect Your Wallet</h3>
-                            <p>Connect your Solana wallet (Phantom, Solflare, etc.) to get started.</p>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px; margin-bottom: 25px;">
-                        <div style="background: var(--primary); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">2</div>
-                        <div>
-                            <h3>Submit Token Details</h3>
-                            <p>Enter your token contract address and select your preferred trending tier and duration.</p>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px; margin-bottom: 25px;">
-                        <div style="background: var(--primary); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">3</div>
-                        <div>
-                            <h3>Make Payment</h3>
-                            <p>Confirm the transaction in your wallet to pay the required SOL amount.</p>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px;">
-                        <div style="background: var(--primary); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">4</div>
-                        <div>
-                            <h3>Get Boosted</h3>
-                            <p>After payment confirmation, our team will manually review and activate your boost.</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 30px; padding: 20px; background: rgba(20, 241, 149, 0.1); border-radius: 10px; border: 1px solid var(--secondary);">
-                    <h3 style="color: var(--secondary); margin-bottom: 10px;">Why Choose Top 7?</h3>
-                    <p>The Top 7 tier provides significantly higher visibility and engagement compared to Top 15. 
-                    While more expensive, it typically results in 3-5x more exposure for your token.</p>
-                </div>
-            </div>
-        </div>
-        
-        <footer>
-            <p>© 2023 SolTrending Service. All rights reserved.</p>
-            <p style="margin-top: 10px; font-size: 12px; color: #777;">
-                This service is not affiliated with any official Solana project. Use at your own risk.
-            </p>
-        </footer>
-    </div>
-    
-    <div class="notification" id="notification">
-        <div id="notification-message"></div>
-    </div>
 
+                <div class="form-group">
+                    <label>Price:</label>
+                    <div id="priceDisplay" class="price-display">0.0 SOL</div>
+                </div>
+
+                <button type="submit" class="btn primary">Proceed to Payment</button>
+            </form>
+        </section>
+
+        <section id="paymentSection" class="payment-section hidden">
+            <h3>Payment</h3>
+            <div class="payment-details">
+                <p>Send payment to: <strong>2YKep2DpgHytRwEnHnQmdzu1Hgc22VqJXpq13tuCnpfY</strong></p>
+                <p>Amount: <span id="paymentAmount">0.0 SOL</span></p>
+                <button id="makePayment" class="btn primary">Make Payment</button>
+            </div>
+        </section>
+
+        <section id="confirmationSection" class="confirmation-section hidden">
+            <h3>Payment Successful!</h3>
+            <p>Your token boost request has been submitted. Our team will start the boost shortly.</p>
+            <p>Transaction ID: <span id="transactionId">--</span></p>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 SolTrend. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/wallet.js"></script>
+    <script src="js/payment.js"></script>
+    <script src="js/telegram.js"></script>
     <script>
-        // DOM Elements
-        const connectBtn = document.getElementById('connect-wallet');
-        const walletStatus = document.getElementById('wallet-status');
-        const walletBalance = document.getElementById('wallet-balance');
-        const tokenAddressInput = document.getElementById('token-address');
-        const trendingTierSelect = document.getElementById('trending-tier');
-        const durationSelect = document.getElementById('duration');
-        const totalPriceElement = document.getElementById('total-price');
-        const payButton = document.getElementById('pay-button');
-        const notification = document.getElementById('notification');
-        const notificationMessage = document.getElementById('notification-message');
-        const priceItems = document.querySelectorAll('.price-item');
-        
-        // Price data
-        const priceData = {
-            top15: {
-                4: 1.0,
-                8: 1.7,
-                16: 4.1,
-                24: 5.2
-            },
-            top7: {
-                4: 1.5,
-                8: 3.0,
-                16: 5.7,
-                24: 8.4
-            }
-        };
-        
-        // State
-        let wallet = null;
-        let publicKey = null;
-        
-        // Initialize
-        function init() {
-            updatePrice();
-            setupEventListeners();
-        }
-        
-        // Set up event listeners
-        function setup
-        // Set up event listeners
-        function setupEventListeners() {
-            connectBtn.addEventListener('click', connectWallet);
-            trendingTierSelect.addEventListener('change', updatePrice);
-            durationSelect.addEventListener('change', updatePrice);
-            payButton.addEventListener('click', processPayment);
-            
-            // Price item selection
-            priceItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    // Remove selected class from all items
-                    priceItems.forEach(i => i.classList.remove('selected'));
-                    
-                    // Add selected class to clicked item
-                    item.classList.add('selected');
-                    
-                    // Update selects to match selection
-                    const tier = item.dataset.tier;
-                    const duration = item.dataset.duration;
-                    
-                    trendingTierSelect.value = tier;
-                    durationSelect.value = duration;
-                    
-                    updatePrice();
-                });
-            });
-        }
-        
-        // Update displayed price
-        function updatePrice() {
-            const tier = trendingTierSelect.value;
-            const duration = parseInt(durationSelect.value);
-            const price = priceData[tier][duration];
-            totalPriceElement.textContent = `${price} SOL`;
-        }
-        
-        // Connect wallet
-        async function connectWallet() {
-            try {
-                // In a real implementation, this would connect to a Solana wallet
-                // For this demo, we'll simulate a connection
-                
-                // Simulate wallet connection delay
-                showNotification('Connecting to wallet...', 'info');
-                
-                setTimeout(() => {
-                    // Simulate successful connection
-                    publicKey = '8wHjz5...'; // Simulated public key
-                    wallet = {
-                        connected: true,
-                        publicKey: publicKey
-                    };
-                    
-                    walletStatus.textContent = `Connected: ${publicKey.substring(0, 6)}...${publicKey.substring(publicKey.length - 4)}`;
-                    walletBalance.textContent = '12.5 SOL';
-                    connectBtn.textContent = 'Disconnect';
-                    payButton.disabled = false;
-                    payButton.textContent = 'Pay Now';
-                    
-                    showNotification('Wallet connected successfully!', 'success');
-                }, 1500);
-                
-            } catch (error) {
-                console.error('Wallet connection error:', error);
-                showNotification('Failed to connect wallet. Please try again.', 'error');
-            }
-        }
-        
-        // Process payment
-        async function processPayment() {
-            if (!wallet || !wallet.connected) {
-                showNotification('Please connect your wallet first', 'error');
-                return;
-            }
-            
-            const tokenAddress = tokenAddressInput.value.trim();
-            if (!tokenAddress) {
-                showNotification('Please enter your token contract address', 'error');
-                return;
-            }
-            
-            // Validate token address format (basic validation)
-            if (tokenAddress.length < 32) {
-                showNotification('Invalid token address format', 'error');
-                return;
-            }
-            
-            const tier = trendingTierSelect.value;
-            const duration = parseInt(durationSelect.value);
-            const price = priceData[tier][duration];
-            
-            // Show payment confirmation
-            showNotification(`Confirming payment of ${price} SOL...`, 'info');
-            
-            // Simulate payment processing
-            setTimeout(() => {
-                // Simulate successful payment
-                showNotification(`Payment of ${price} SOL confirmed!`, 'success');
-                
-                // Send notification to Telegram
-                sendTelegramNotification(tokenAddress, tier, duration, price);
-                
-                // Reset form
-                tokenAddressInput.value = '';
-                trendingTierSelect.value = 'top15';
-                durationSelect.value = '4';
-                updatePrice();
-                
-                // Show success message
-                showNotification('Your boost request has been submitted! Our team will activate it shortly.', 'success');
-            }, 2000);
-        }
-        
-        // Send notification to Telegram
-        function sendTelegramNotification(tokenAddress, tier, duration, price) {
-            // In a real implementation, this would send a request to your backend
-            // which would then send a message to your Telegram bot
-            
-            console.log('Sending Telegram notification:');
-            console.log(`Token: ${tokenAddress}`);
-            console.log(`Tier: ${tier === 'top7' ? 'Top 7' : 'Top 15'}`);
-            console.log(`Duration: ${duration} hours`);
-            console.log(`Price: ${price} SOL`);
-            console.log('Recipient: Developer Telegram ID 1129109001');
-            
-            // Simulate API call
-            fetch('https://api.telegram.org/bot8437925187:AAH46fK7ESfWSlDyxu82vlZ8bIbqxia5Aps/sendMessage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    chat_id: 1129109001,
-                    text: `New SolTrending Request:\nToken: ${tokenAddress}\nTier: ${tier === 'top7' ? 'Top 7' : 'Top 15'}\nDuration: ${duration} hours\nPrice: ${price} SOL\nWallet: ${publicKey}`
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to send Telegram notification');
-                }
-                console.log('Telegram notification sent successfully');
-            })
-            .catch(error => {
-                console.error('Error sending Telegram notification:', error);
-                showNotification('Failed to notify developer. Please contact support.', 'error');
-            });
-        }
-        
-        // Show notification
-        function showNotification(message, type) {
-            notificationMessage.textContent = message;
-            notification.className = 'notification show ' + type;
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 5000);
-        }
-        
-        // Initialize the app
-        window.addEventListener('DOMContentLoaded', init);
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeWallet();
+            setupFormHandlers();
+        });
     </script>
 </body>
 </html>
