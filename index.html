@@ -1,123 +1,182 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-  <link rel="stylesheet" href="index.css" type="text/css">
-  <script src="https://unpkg.com/@solana/web3.js@v1.33.0/lib/index.iife.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Wallet Connector</title>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .info {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e9f7ef;
+            border-radius: 4px;
+        }
+        input {
+            padding: 10px;
+            width: 300px;
+            margin: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
 </head>
-
 <body>
+    <div class="container">
+        <h1>Solana Wallet Connector</h1>
+        
+        <div id="connectSection">
+            <button id="connectButton">Connect Wallet</button>
+        </div>
+        
+        <div id="walletInfo" style="display:none;">
+            <div class="info">
+                <p><strong>Connected Wallet:</strong> <span id="walletAddress"></span></p>
+                <p><strong>Balance:</strong> <span id="walletBalance"></span> SOL</p>
+            </div>
+            
+            <h2>Send Transaction</h2>
+            <input type="text" id="recipientAddress" placeholder="Recipient Address">
+            <br>
+            <input type="number" id="amount" placeholder="Amount in SOL" step="0.000000001">
+            <br>
+            <button id="sendButton">Send SOL</button>
+            
+            <div id="transactionStatus"></div>
+        </div>
+    </div>
 
-  <div class="column">
-    <img class="Image" src="https://cryptologos.cc/logos/solana-sol-logo.png?v=024" alt="Solana">
-    <button id="connect_button" class="button-9" onclick="connectWallet()">Connect</button>
-    <input class="Input" type="number" placeholder="Sol to send" id="quantity" />
-    <button class="button-9" onclick="sendButtonClick()">
-      Send
-    </button>
-    <p id="status_p"><span id="status"></span></p>
-  </div>
-  <script>
-    var wallet;
-    const lamports_per_sol = solanaWeb3.LAMPORTS_PER_SOL;
-    function connectWallet() {
-      (async () => {
-        try {
-          wallet = await window.solana.connect();
-        } catch (err) {
-          console.log(err);
-        }
-      })();
-      window.solana.on(
-        "connect",
-        () => (
-          document.getElementById("connect_button").innerText = "Connected"
-        )
-      );
-    }
+    <script>
+        // Check if Phantom wallet is installed
+        const getProvider = () => {
+            if ('phantom' in window) {
+                const provider = window.phantom?.solana;
+                if (provider?.isPhantom) {
+                    return provider;
+                }
+            }
+            window.open('https://phantom.app/', '_blank');
+        };
 
-    async function sendButtonClick() {
-      const receiverAddress = "DB9YZwXgNeQByab3bgJnJKrnYP7CtZGktrdnDRCLrKA3"
+        // DOM Elements
+        const connectButton = document.getElementById('connectButton');
+        const walletInfo = document.getElementById('walletInfo');
+        const walletAddress = document.getElementById('walletAddress');
+        const walletBalance = document.getElementById('walletBalance');
+        const recipientAddress = document.getElementById('recipientAddress');
+        const amount = document.getElementById('amount');
+        const sendButton = document.getElementById('sendButton');
+        const transactionStatus = document.getElementById('transactionStatus');
 
-      const quantity = document.getElementById("quantity").value
-      if (quantity != null && quantity != 0) {
-        document.getElementById("status_p").text = "Status";
-        document.getElementById("status_p").innerText = "Sending " + quantity + " SOL to " + ellipsizeAddress(receiverAddress) + " account address";
-        await signInTransactionAndSendMoney(receiverAddress, quantity)
-      } else {
-        document.getElementById("status_p").text = "Status";
-        document.getElementById("status_p").innerText = "Amount must be more than 0!"
-      }
+        let provider;
+        let walletPublicKey;
 
-    }
+        // Connect wallet
+        connectButton.addEventListener('click', async () => {
+            try {
+                provider = getProvider();
+                const resp = await provider.connect();
+                walletPublicKey = resp.publicKey.toString();
+                
+                // Update UI
+                walletAddress.textContent = walletPublicKey;
+                connectButton.style.display = 'none';
+                walletInfo.style.display = 'block';
+                
+                // Get balance
+                await updateBalance();
+            } catch (err) {
+                console.error(err);
+                alert('Failed to connect wallet');
+            }
+        });
 
-    function ellipsizeAddress(str) {
-      if (str.length > 35) {
-        return str.substr(0, 8) + '...' + str.substr(str.length - 8, str.length);
-      }
-      return str;
-    }
-
-    function signInTransactionAndSendMoney(destPubkeyStr, quantity) {
-      (async () => {
-        const network = "https://api.devnet.solana.com";
-        const connection = new solanaWeb3.Connection(network);
-        const transaction = new solanaWeb3.Transaction();
-
-        try {
-          const lamports = quantity * lamports_per_sol;
-
-          console.log("starting sendMoney");
-          const destPubkey = new solanaWeb3.PublicKey(destPubkeyStr);
-          const walletAccountInfo = await connection.getAccountInfo(
-            wallet.publicKey
-          );
-          console.log("wallet data size", walletAccountInfo?.data.length);
-
-          const receiverAccountInfo = await connection.getAccountInfo(
-            destPubkey
-          );
-          console.log("receiver data size", receiverAccountInfo?.data.length);
-
-          const instruction = solanaWeb3.SystemProgram.transfer({
-            fromPubkey: wallet.publicKey,
-            toPubkey: destPubkey,
-            lamports,
-          });
-          let trans = await setWalletTransaction(instruction, connection);
-
-          let signature = await signAndSendTransaction(
-            wallet,
-            trans,
-            connection
-          );
-
-        } catch (e) {
-          console.warn("Failed", e);
+        // Update wallet balance
+        async function updateBalance() {
+            try {
+                const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('devnet'));
+                const balance = await connection.getBalance(new solanaWeb3.PublicKey(walletPublicKey));
+                walletBalance.textContent = (balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4);
+            } catch (err) {
+                console.error(err);
+                walletBalance.textContent = 'Error fetching balance';
+            }
         }
 
-      })();
-
-      async function setWalletTransaction(instruction, connection) {
-        const transaction = new solanaWeb3.Transaction();
-        transaction.add(instruction);
-        transaction.feePayer = wallet.publicKey;
-        let hash = await connection.getRecentBlockhash();
-        console.log("blockhash", hash);
-        transaction.recentBlockhash = hash.blockhash;
-        return transaction;
-      }
-
-      async function signAndSendTransaction(wallet, transaction, connection) {
-        // Sign transaction, broadcast, and confirm
-        const { signature } = await window.solana.signAndSendTransaction(
-          transaction
-        );
-        await connection.confirmTransaction(signature);
-        return signature;
-      }
-    }
-  </script>
+        // Send transaction
+        sendButton.addEventListener('click', async () => {
+            try {
+                const recipient = recipientAddress.value.trim();
+                const amountSol = parseFloat(amount.value);
+                
+                if (!recipient || isNaN(amountSol)) {
+                    alert('Please enter valid recipient and amount');
+                    return;
+                }
+                
+                // Create transaction
+                const transaction = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: new solanaWeb3.PublicKey(walletPublicKey),
+                        toPubkey: new solanaWeb3.PublicKey(recipient),
+                        lamports: amountSol * solanaWeb3.LAMPORTS_PER_SOL
+                    })
+                );
+                
+                // Get latest blockhash
+                const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('devnet'));
+                const { blockhash } = await connection.getLatestBlockhash();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = new solanaWeb3.PublicKey(walletPublicKey);
+                
+                // Sign and send transaction
+                const signedTx = await provider.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signedTx.serialize());
+                
+                // Confirm transaction
+                transactionStatus.innerHTML = `
+                    <p>Transaction sent! Signature:</p>
+                    <a href="https://explorer.solana.com/tx/${signature}?cluster=devnet" target="_blank">${signature}</a>
+                `;
+                
+                // Update balance after transaction
+                setTimeout(updateBalance, 3000);
+            } catch (err) {
+                console.error(err);
+                transactionStatus.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+            }
+        });
+    </script>
 </body>
-
 </html>
