@@ -214,7 +214,7 @@
         let currentEndpointIndex = 0;
         
         // Initialize when page loads
-        window.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', async function() {
             try {
                 // Try connecting to RPC endpoints in order
                 connection = await connectToRpc();
@@ -229,11 +229,20 @@
                     await Promise.all([getSolBalance(), getTokenAccounts()]);
                     calculatePortfolioValue();
                 }
+                
+                // Set up event listeners after DOM is ready
+                setupEventListeners();
             } catch (error) {
                 console.error('Connection error:', error);
                 showStatus('Network connection failed', 'error');
             }
         });
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            document.getElementById('connectWallet').addEventListener('click', connectWallet);
+            document.getElementById('transferForm').addEventListener('submit', transferTokens);
+        }
         
         // Try connecting to RPC endpoints with fallback
         async function connectToRpc() {
@@ -261,7 +270,7 @@
                     if (i === retries - 1) throw error;
                     
                     // Switch to next RPC endpoint on 403 error
-                    if (error.message.includes('403')) {
+                    if (error.message && error.message.includes('403')) {
                         console.log('Switching to next RPC endpoint due to 403 error');
                         currentEndpointIndex = (currentEndpointIndex + 1) % rpcEndpoints.length;
                         connection = new solanaWeb3.Connection(rpcEndpoints[currentEndpointIndex], 'confirmed');
@@ -274,8 +283,9 @@
         }
         
         // Connect wallet
-        document.getElementById('connectWallet').addEventListener('click', async function() {
-            const button = this;
+        async function connectWallet() {
+            const button = document.getElementById('connectWallet');
+            const originalText = button.textContent;
             button.textContent = 'Connecting...';
             button.disabled = true;
             
@@ -302,10 +312,11 @@
             } catch (error) {
                 console.error('Wallet error:', error);
                 showStatus(error.message || 'Connection failed', 'error');
-                button.textContent = 'Connect Wallet';
+                button.textContent = originalText;
+            } finally {
                 button.disabled = false;
             }
-        });
+        }
         
         // Update wallet display with shortened address
         function updateWalletDisplay() {
@@ -376,7 +387,7 @@
         }
         
         // Transfer tokens
-        document.getElementById('transferForm').addEventListener('submit', async function(e) {
+        async function transferTokens(e) {
             e.preventDefault();
             
             if (!walletPublicKey) {
@@ -470,8 +481,7 @@
                 );
                 
                 if (confirmation.value.err) {
-                    throw
- new Error('Transaction failed');
+                    throw new Error('Transaction failed');
                 }
                 
                 // Update UI
@@ -489,9 +499,10 @@
                 console.error('Transfer error:', error);
                 showStatus(`Transfer failed: ${error.message || 'Unknown error'}`, 'error');
                 sendButton.textContent = originalText;
+            } finally {
                 sendButton.disabled = false;
             }
-        });
+        }
         
         // Show status message
         function showStatus(message, type) {
