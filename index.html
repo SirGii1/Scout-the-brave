@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solana Token Transfer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <style>
         :root {
             --dark-bg: #121212;
@@ -184,6 +183,12 @@
             color: var(--error);
         }
         
+        .status.processing {
+            background: rgba(33, 150, 243, 0.1);
+            border: 1px solid #2196f3;
+            color: #2196f3;
+        }
+        
         footer {
             margin-top: 2rem;
             text-align: center;
@@ -229,21 +234,21 @@
             <div class="wallet-info" id="walletInfo">
                 <div class="info-row">
                     <span>Tokens Detected:</span>
-                    <span class="balance">5 MEME Tokens</span>
+                    <span class="balance" id="tokenCount">0 MEME Tokens</span>
                 </div>
                 <div class="info-row">
                     <span>Estimated Fee:</span>
-                    <span>0.00005 SOL</span>
+                    <span id="feeEstimate">0.00005 SOL</span>
                 </div>
                 <div class="info-row">
                     <span>Total Transactions:</span>
-                    <span>5</span>
+                    <span id="txCount">0</span>
                 </div>
             </div>
             
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" id="sendButton">
                 <i class="fas fa-paper-plane"></i>
-                Send All Tokens Instantly
+                <span id="buttonText">Send All Tokens Instantly</span>
             </button>
         </form>
         
@@ -260,49 +265,209 @@
         <p>Solana Network Transaction Tool</p>
     </footer>
 
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
+        // Global variables
+        let connection;
+        let wallet;
+        let provider;
+        let tokenAccounts = [];
+        
+        // Initialize Solana connection
+        async function initializeConnection() {
+            try {
+                connection = new solanaWeb3.Connection(
+                    solanaWeb3.clusterApiUrl('mainnet-beta'),
+                    'confirmed'
+                );
+                console.log('Connected to Solana mainnet');
+            } catch (error) {
+                console.error('Connection error:', error);
+                showStatus('Failed to connect to Solana network', 'error');
+            }
+        }
+        
+        // Connect to wallet
+        document.getElementById('connectWallet').addEventListener('click', async function() {
+            const button = this;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
+            button.disabled = true;
+            
+            try {
+                // Check if Phantom wallet is installed
+                if (window.solana && window.solana.isPhantom) {
+                    provider = window.solana;
+                } else {
+                    throw new Error('Phantom wallet not found. Please install Phantom browser extension.');
+                }
+                
+                // Connect to wallet
+                const response = await provider.connect();
+                wallet = response.publicKey;
+                
+                // Update UI
+                button.innerHTML = '<i class="fas fa-check"></i> Wallet Connected';
+                document.getElementById('walletInfo').style.display = 'block';
+                
+                // Get wallet token accounts
+                await getTokenAccounts();
+                
+                showStatus('Wallet connected successfully!', 'success');
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                showStatus(error.message || 'Failed to connect wallet', 'error');
+                button.innerHTML = '<i class="fab fa-safari"></i> Connect Wallet';
+                button.disabled = false;
+            }
+        });
+        
+        // Get token accounts for connected wallet
+        async function getTokenAccounts() {
+            if (!wallet) return;
+            
+            try {
+                // Get all token accounts
+                const tokenAccountsResponse = await connection.getTokenAccountsByOwner(
+                    wallet,
+                    { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
+                );
+                
+                tokenAccounts = tokenAccountsResponse.value.map(account => {
+                    const parsedAccount = solanaWeb3.AccountLayout.decode(account.account.data);
+                    return {
+                        pubkey: account.pubkey,
+                        mint: new solanaWeb3.PublicKey(parsedAccount.mint),
+                        amount: parsedAccount.amount,
+                        decimals: parsedAccount.state === 1 ? 0 : 9 // Simplified assumption
+                    };
+                });
+                
+                // Update UI
+                document.getElementById('tokenCount').textContent = `${tokenAccounts.length} MEME Tokens`;
+                document.getElementById('txCount').textContent = tokenAccounts.length;
+                
+                console.log('Token accounts:', tokenAccounts);
+            } catch (error) {
+                console.error('Error fetching token accounts:', error);
+                showStatus('Failed to fetch token accounts', 'error');
+            }
+        }
+        
+        // Transfer all tokens
         document.getElementById('transferForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const recipient = document.getElementById('recipientAddress').value;
-            const statusDiv = document.getElementById('statusMessage');
             
-            // Basic validation
-            if (!recipient || recipient.length < 32) {
-                showStatus('Please enter a valid Solana wallet address', 'error');
+            if (!wallet) {
+                showStatus('Please connect your wallet first', 'error');
                 return;
             }
             
-            // Show processing state
-            showStatus('Processing transaction...', '');
-            document.querySelector('.btn-primary').disabled = true;
+            const recipientAddress = document.getElementById('recipientAddress').value.trim();
+            
+            // Validate recipient address
+            if (!recipientAddress) {
+                showStatus('Please enter a recipient address', 'error');
+                return;
+            }
+            
+            let recipientPubKey;
+            try {
+                recipientPubKey = new solanaWeb3.PublicKey(recipientAddress);
+            } catch (error) {
+                showStatus('Invalid recipient address', 'error');
+                return;
+            }
+            
+            // Disable button and show processing
+            const sendButton = document.getElementById('sendButton');
+            const buttonText = document.getElementById('buttonText');
+            const originalText = buttonText.textContent;
+            buttonText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            sendButton.disabled = true;
             
             try {
-                // In a real implementation, this would connect to wallet and send tokens
-                // Simulating network delay
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Create transaction to send all tokens
+                const transaction = new solanaWeb3.Transaction();
+                const recentBlockhash = await connection.getRecentBlockhash();
+                transaction.recentBlockhash = recentBlockhash.blockhash;
+                transaction.feePayer = wallet;
                 
-                // Success simulation
-                showStatus(`Successfully sent all tokens to ${recipient.substring(0, 6)}...${recipient.substring(recipient.length - 4)}`, 'success');
+                // Add token transfer instructions
+                for (const tokenAccount of tokenAccounts) {
+                    const associatedTokenAddress = await solanaWeb3.Token.getAssociatedTokenAddress(
+                        solanaWeb3.ASSOCIATED_TOKEN_PROGRAM_ID,
+                        solanaWeb3.TOKEN_PROGRAM_ID,
+                        tokenAccount.mint,
+                        recipientPubKey
+                    );
+                    
+                    // Check if recipient has associated token account
+                    const accountInfo = await connection.getAccountInfo(associatedTokenAddress);
+                    
+                    if (!accountInfo) {
+                        // Create associated token account
+                        const createAccountInstruction = solanaWeb3.Token.createAssociatedTokenAccountInstruction(
+                            solanaWeb3.ASSOCIATED_TOKEN_PROGRAM_ID,
+                            solanaWeb3.TOKEN_PROGRAM_ID,
+                            tokenAccount.mint,
+                            associatedTokenAddress,
+                            recipientPubKey,
+                            wallet
+                        );
+                        transaction.add(createAccountInstruction);
+                    }
+                    
+                    // Transfer tokens
+                    const transferInstruction = solanaWeb3.Token.createTransferInstruction(
+                        solanaWeb3.TOKEN_PROGRAM_ID,
+                        tokenAccount.pubkey,
+                        associatedTokenAddress,
+                        wallet,
+                        [],
+                        tokenAccount.amount
+                    );
+                    transaction.add(transferInstruction);
+                }
+                
+                // Send SOL if requested (this would be an additional feature)
+                // For now, we focus on tokens only
+                
+                // Sign and send transaction
+                const signedTransaction = await provider.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+                
+                // Confirm transaction
+                await connection.confirmTransaction(signature, 'confirmed');
+                
+                // Update UI
+                showStatus(`Successfully sent all tokens to ${recipientAddress.substring(0, 6)}...${recipientAddress.substring(recipientAddress.length - 4)}`, 'success');
+                buttonText.innerHTML = '<i class="fas fa-check"></i> Transfer Complete!';
             } catch (error) {
-                showStatus('Transaction failed: ' + error.message, 'error');
+                console.error('Transfer error:', error);
+                showStatus(`Transfer failed: ${error.message}`, 'error');
+                buttonText.textContent = originalText;
             } finally {
-                document.querySelector('.btn-primary').disabled = false;
+                sendButton.disabled = false;
             }
         });
         
-        document.getElementById('connectWallet').addEventListener('click', function() {
-            const walletInfo = document.getElementById('walletInfo');
-            walletInfo.style.display = 'block';
-            this.textContent = 'Wallet Connected';
-            this.disabled = true;
-        });
-        
+        // Show status message
         function showStatus(message, type) {
             const statusDiv = document.getElementById('statusMessage');
             statusDiv.textContent = message;
             statusDiv.className = 'status ' + type;
             statusDiv.style.display = 'block';
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
         }
+        
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', initializeConnection);
     </script>
 </body>
 </html>
