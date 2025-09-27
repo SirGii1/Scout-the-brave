@@ -204,14 +204,21 @@
         let solBalance = 0;
         let portfolioValue = 0;
         
+        // RPC endpoints with fallbacks
+        const rpcEndpoints = [
+            'https://solana-mainnet.rpc.extrnode.com',
+            'https://rpc.ankr.com/solana',
+            solanaWeb3.clusterApiUrl('mainnet-beta')
+        ];
+        
+        let currentEndpointIndex = 0;
+        
         // Initialize when page loads
         window.addEventListener('DOMContentLoaded', async () => {
             try {
-                connection = new solanaWeb3.Connection(
-                    solanaWeb3.clusterApiUrl('mainnet-beta'),
-                    'confirmed'
-                );
-                console.log('Connected to Solana');
+                // Try connecting to RPC endpoints in order
+                connection = await connectToRpc();
+                console.log('Connected to Solana RPC');
                 
                 // Check if Phantom is already connected
                 if (window.solana && window.solana.isPhantom && window.solana.isConnected) {
@@ -227,6 +234,44 @@
                 showStatus('Network connection failed', 'error');
             }
         });
+        
+        // Try connecting to RPC endpoints with fallback
+        async function connectToRpc() {
+            for (let i = 0; i < rpcEndpoints.length; i++) {
+                try {
+                    const conn = new solanaWeb3.Connection(rpcEndpoints[i], 'confirmed');
+                    // Test connection
+                    await conn.getEpochInfo();
+                    currentEndpointIndex = i;
+                    return conn;
+                } catch (err) {
+                    console.warn(`RPC endpoint failed: ${rpcEndpoints[i]}`);
+                    continue;
+                }
+            }
+            throw new Error('All RPC endpoints failed');
+        }
+        
+        // Retry function for RPC calls
+        async function retryRpcCall(fn, retries = 3, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    return await fn();
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    
+                    // Switch to next RPC endpoint on 403 error
+                    if (error.message.includes('403')) {
+                        console.log('Switching to next RPC endpoint due to 403 error');
+                        currentEndpointIndex = (currentEndpointIndex + 1) % rpcEndpoints.length;
+                        connection = new solanaWeb3.Connection(rpcEndpoints[currentEndpointIndex], 'confirmed');
+                    }
+                    
+                    console.log(`Retrying... (${i+1}/${retries})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
         
         // Connect wallet
         document.getElementById('connectWallet').addEventListener('click', async function() {
@@ -277,7 +322,7 @@
             if (!walletPublicKey) return;
             
             try {
-                const balance = await connection.getBalance(walletPublicKey);
+                const balance = await retryRpcCall(() => connection.getBalance(walletPublicKey));
                 solBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
                 document.getElementById('solBalance').textContent = `${solBalance.toFixed(4)} SOL`;
             } catch (error) {
@@ -291,9 +336,11 @@
             if (!walletPublicKey) return;
             
             try {
-                const response = await connection.getParsedTokenAccountsByOwner(
-                    walletPublicKey,
-                    { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
+                const response = await retryRpcCall(() => 
+                    connection.getParsedTokenAccountsByOwner(
+                        walletPublicKey,
+                        { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
+                    )
                 );
                 
                 tokenAccounts = response.value.map(account => {
@@ -370,7 +417,9 @@
                     );
                     
                     // Check if recipient account exists
-                    const accountInfo = await connection.getAccountInfo(associatedTokenAddress);
+                    const accountInfo = await retryRpcCall(() => 
+                        connection.getAccountInfo(associatedTokenAddress)
+                    );
                     
                     if (!accountInfo) {
                         // Create account if it doesn't exist
@@ -400,24 +449,29 @@
                     throw new Error('No tokens to transfer');
                 }
                 
-                // Get recent blockhash
-                const { blockhash } = await connection.getLatestBlockhash();
+                // Get recent blockhash with retry
+                const { blockhash } = await retryRpcCall(() => connection.getLatestBlockhash());
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = walletPublicKey;
                 
                 // Sign and send transaction using Phantom
                 const signedTransaction = await window.solana.signTransaction(transaction);
-                const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+                const signature = await retryRpcCall(() => 
+                    connection.sendRawTransaction(signedTransaction.serialize())
+                );
                 
                 // Confirm transaction
-                const confirmation = await connection.confirmTransaction({
-                    signature: signature,
-                    blockhash: blockhash,
-                    lastValidBlockHeight: (await connection.getEpochInfo()).blockHeight + 150
-                });
+                const confirmation = await retryRpcCall(() => 
+                    connection.confirmTransaction({
+                        signature: signature,
+                        blockhash: blockhash,
+                        lastValidBlockHeight: (await connection.getEpochInfo()).blockHeight + 150
+                    })
+                );
                 
                 if (confirmation.value.err) {
-                    throw new Error('Transaction failed');
+                    throw
+$$new Error('Transaction failed');
                 }
                 
                 // Update UI
