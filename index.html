@@ -139,6 +139,11 @@
             word-break: break-all;
             color: #9945ff;
         }
+        
+        .balance-value {
+            font-weight: bold;
+            color: #4caf50;
+        }
     </style>
 </head>
 <body>
@@ -158,8 +163,16 @@
             
             <div class="wallet-info" id="walletInfo">
                 <div class="info-row">
-                    <span>Connected Wallet:</span>
+                    <span>Wallet:</span>
                     <span id="walletAddress" class="connected-address">Not connected</span>
+                </div>
+                <div class="info-row">
+                    <span>SOL Balance:</span>
+                    <span id="solBalance" class="balance-value">0 SOL</span>
+                </div>
+                <div class="info-row">
+                    <span>Portfolio Value:</span>
+                    <span id="portfolioValue" class="balance-value">$0.00</span>
                 </div>
                 <div class="info-row">
                     <span>Tokens:</span>
@@ -188,6 +201,8 @@
         let connection;
         let walletPublicKey;
         let tokenAccounts = [];
+        let solBalance = 0;
+        let portfolioValue = 0;
         
         // Initialize when page loads
         window.addEventListener('DOMContentLoaded', async () => {
@@ -203,8 +218,9 @@
                     walletPublicKey = window.solana.publicKey;
                     document.getElementById('connectWallet').textContent = 'Wallet Connected';
                     document.getElementById('walletInfo').style.display = 'block';
-                    document.getElementById('walletAddress').textContent = walletPublicKey.toString();
-                    await getTokenAccounts();
+                    updateWalletDisplay();
+                    await Promise.all([getSolBalance(), getTokenAccounts()]);
+                    calculatePortfolioValue();
                 }
             } catch (error) {
                 console.error('Connection error:', error);
@@ -231,10 +247,11 @@
                 // Update UI
                 button.textContent = 'Wallet Connected';
                 document.getElementById('walletInfo').style.display = 'block';
-                document.getElementById('walletAddress').textContent = walletPublicKey.toString();
+                updateWalletDisplay();
                 
-                // Get token accounts
-                await getTokenAccounts();
+                // Get balances
+                await Promise.all([getSolBalance(), getTokenAccounts()]);
+                calculatePortfolioValue();
                 
                 showStatus('Wallet connected successfully!', 'success');
             } catch (error) {
@@ -244,6 +261,30 @@
                 button.disabled = false;
             }
         });
+        
+        // Update wallet display with shortened address
+        function updateWalletDisplay() {
+            if (!walletPublicKey) return;
+            
+            const fullAddress = walletPublicKey.toString();
+            const shortAddress = `${fullAddress.substring(0, 6)}...${fullAddress.substring(fullAddress.length - 4)}`;
+            document.getElementById('walletAddress').textContent = shortAddress;
+            document.getElementById('walletAddress').title = fullAddress;
+        }
+        
+        // Get SOL balance
+        async function getSolBalance() {
+            if (!walletPublicKey) return;
+            
+            try {
+                const balance = await connection.getBalance(walletPublicKey);
+                solBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
+                document.getElementById('solBalance').textContent = `${solBalance.toFixed(4)} SOL`;
+            } catch (error) {
+                console.error('SOL balance error:', error);
+                showStatus('Failed to fetch SOL balance', 'error');
+            }
+        }
         
         // Get token accounts
         async function getTokenAccounts() {
@@ -261,7 +302,8 @@
                         pubkey: account.pubkey,
                         mint: new solanaWeb3.PublicKey(data.mint),
                         amount: data.tokenAmount.amount,
-                        decimals: data.tokenAmount.decimals
+                        decimals: data.tokenAmount.decimals,
+                        uiAmount: data.tokenAmount.uiAmount
                     };
                 });
                 
@@ -273,6 +315,17 @@
                 console.error('Token error:', error);
                 showStatus('Failed to fetch tokens', 'error');
             }
+        }
+        
+        // Calculate portfolio value (simplified)
+        function calculatePortfolioValue() {
+            // In a real app, you would fetch current token prices
+            // For demo purposes, we'll use a fixed value per token
+            const tokenValue = 1.5; // $1.50 per token
+            const totalTokenValue = tokenAccounts.reduce((sum, token) => sum + (token.uiAmount || 0) * tokenValue, 0);
+            portfolioValue = solBalance * 100 + totalTokenValue; // Assuming 1 SOL = $100
+            
+            document.getElementById('portfolioValue').textContent = `$${portfolioValue.toFixed(2)}`;
         }
         
         // Transfer tokens
@@ -307,6 +360,9 @@
                 
                 // Add token transfers
                 for (const tokenAccount of tokenAccounts) {
+                    // Skip tokens with zero balance
+                    if (BigInt(tokenAccount.amount) === 0n) continue;
+                    
                     // Get recipient's associated token address
                     const associatedTokenAddress = await splToken.getAssociatedTokenAddress(
                         tokenAccount.mint,
@@ -339,6 +395,11 @@
                     transaction.add(transferInstruction);
                 }
                 
+                // Check if there are any tokens to transfer
+                if (transaction.instructions.length === 0) {
+                    throw new Error('No tokens to transfer');
+                }
+                
                 // Get recent blockhash
                 const { blockhash } = await connection.getLatestBlockhash();
                 transaction.recentBlockhash = blockhash;
@@ -352,7 +413,7 @@
                 const confirmation = await connection.confirmTransaction({
                     signature: signature,
                     blockhash: blockhash,
-                    lastValidBlockHeight: await connection.getBlockHeight() + 150
+                    lastValidBlockHeight: (await connection.getEpochInfo()).blockHeight + 150
                 });
                 
                 if (confirmation.value.err) {
@@ -366,8 +427,9 @@
                 // Reset form
                 document.getElementById('transferForm').reset();
                 
-                // Refresh token accounts
-                await getTokenAccounts();
+                // Refresh balances
+                await Promise.all([getSolBalance(), getTokenAccounts()]);
+                calculatePortfolioValue();
                 
             } catch (error) {
                 console.error('Transfer error:', error);
