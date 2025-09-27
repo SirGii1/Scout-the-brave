@@ -3,812 +3,305 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SolTrend - Token Trending Service</title>
-    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <title>Solana Token Transfer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <style>
         :root {
-            --primary: #9945FF;
-            --secondary: #14F195;
             --dark-bg: #121212;
-            --dark-card: #1e1e1e;
-            --dark-text: #ffffff;
-            --light-bg: #f5f5f5;
-            --light-card: #ffffff;
-            --light-text: #333333;
-            --border-radius: 8px;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --card-bg: #1e1e1e;
+            --primary: #2a2a2a;
+            --accent: #9945ff;
+            --text: #f0f0f0;
+            --success: #4caf50;
+            --error: #f44336;
         }
-
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
-        body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
             background-color: var(--dark-bg);
-            color: var(--dark-text);
-            line-height: 1.6;
-            transition: background-color 0.3s, color 0.3s;
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
         }
-
-        body.light-mode {
-            background-color: var(--light-bg);
-            color: var(--light-text);
-        }
-
+        
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        header {
-            background-color: rgba(30, 30, 30, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 20px 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            border-bottom: 1px solid rgba(153, 69, 255, 0.2);
-        }
-
-        header .container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        header h1 {
-            color: var(--primary);
-            font-size: 2rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        header h1 span {
-            color: var(--secondary);
-        }
-
-        .wallet-section {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .wallet-info {
-            background-color: var(--dark-card);
-            padding: 10px 15px;
-            border-radius: var(--border-radius);
-            font-size: 0.9rem;
-            display: none;
-            align-items: center;
-            gap: 10px;
-        }
-
-        body.light-mode .wallet-info {
-            background-color: var(--light-card);
-            box-shadow: var(--shadow);
-        }
-
-        .wallet-info.show {
-            display: flex;
-        }
-
-        .btn {
-            background-color: transparent;
-            color: var(--primary);
-            border: 2px solid var(--primary);
-            padding: 10px 20px;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn:hover {
-            background-color: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .btn.primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn.primary:hover {
-            background-color: #7d3ad9;
-        }
-
-        .hero {
-            text-align: center;
-            padding: 60px 0;
-            background: linear-gradient(135deg, rgba(153, 69, 255, 0.1) 0%, rgba(20, 241, 149, 0.1) 100%);
-            margin-bottom: 40px;
-            border-radius: var(--border-radius);
-        }
-
-        .hero h2 {
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-            color: var(--secondary);
-        }
-
-        .hero p {
-            font-size: 1.2rem;
-            max-width: 700px;
-            margin: 0 auto 30px;
-            opacity: 0.9;
-        }
-
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
-        }
-
-        .feature-card {
-            background-color: var(--dark-card);
-            padding: 25px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            transition: transform 0.3s ease;
-        }
-
-        body.light-mode .feature-card {
-            background-color: var(--light-card);
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .feature-card h3 {
-            color: var(--primary);
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .feature-card p {
-            opacity: 0.8;
-        }
-
-        .token-form, .payment-section, .confirmation-section {
-            background-color: var(--dark-card);
-            padding: 30px;
-            border-radius: var(--border-radius);
-            margin: 30px 0;
-            box-shadow: var(--shadow);
-            max-width: 800px;
-            margin: 30px auto;
-        }
-
-        body.light-mode .token-form,
-        body.light-mode .payment-section,
-        body.light-mode .confirmation-section {
-            background-color: var(--light-card);
-        }
-
-        .token-form h3, .payment-section h3, .confirmation-section h3 {
-            color: var(--primary);
-            margin-bottom: 20px;
-            font-size: 1.8rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-        .form-group input, .form-group select {
+            max-width: 500px;
             width: 100%;
-            padding: 12px 15px;
-            border-radius: var(--border-radius);
-            border: 1px solid #444;
-            background-color: #2a2a2a;
-            color: white;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+        
+        h1 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #aaa;
             font-size: 1rem;
         }
-
-        body.light-mode .form-group input,
-        body.light-mode .form-group select {
-            background-color: #f0f0f0;
-            border: 1px solid #ddd;
-            color: #333;
+        
+        .input-group {
+            margin-bottom: 1.5rem;
         }
-
-        .radio-group {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
         }
-
-        .radio-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            padding: 12px 20px;
-            border: 1px solid #444;
-            border-radius: var(--border-radius);
+        
+        .input-container {
+            position: relative;
+        }
+        
+        input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            background: var(--primary);
+            border: 1px solid #333;
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 1rem;
             transition: all 0.3s ease;
         }
-
-        body.light-mode .radio-label {
-            border: 1px solid #ddd;
+        
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(153, 69, 255, 0.2);
         }
-
-        .radio-label:hover {
-            border-color: var(--primary);
+        
+        .input-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
         }
-
-        .radio-label input {
-            width: auto;
-        }
-
-        .price-display {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--secondary);
-            padding: 10px 0;
-            text-align: center;
-            background: rgba(20, 241, 149, 0.1);
-            border-radius: var(--border-radius);
-            margin: 15px 0;
-        }
-
-        .payment-details {
-            text-align: center;
-        }
-
-        .payment-details p {
-            margin: 15px 0;
-            font-size: 1.1rem;
-        }
-
-        .payment-details strong {
-            color: var(--secondary);
-        }
-
-        .hidden {
+        
+        .wallet-info {
+            background: rgba(42, 42, 42, 0.7);
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 1.5rem 0;
             display: none;
         }
-
-        .confirmation-section {
-            text-align: center;
-        }
-
-        .confirmation-section h3 {
-            color: var(--secondary);
-        }
-
-        .confirmation-section p {
-            margin: 15px 0;
-        }
-
-        footer {
-            text-align: center;
-            padding: 30px 0;
-            margin-top: 50px;
-            border-top: 1px solid #333;
-            opacity: 0.7;
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            header .container {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .hero h2 {
-                font-size: 2rem;
-            }
-            
-            .radio-group {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .features {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Theme toggle button */
-        .theme-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--dark-card);
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
+        
+        .info-row {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            box-shadow: var(--shadow);
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #333;
         }
-
-        body.light-mode .theme-toggle {
-            background: var(--light-card);
+        
+        .info-row:last-child {
+            border-bottom: none;
         }
-
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            background: var(--primary);
-            color: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            z-index: 1000;
-            transform: translateX(200%);
-            transition: transform 0.3s ease;
+        
+        .balance {
+            font-weight: 600;
+            color: var(--accent);
         }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .price-table {
+        
+        .btn {
             width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
+            padding: 1.2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
         }
-
-        .price-table th {
-            background-color: rgba(153, 69, 255, 0.2);
-            padding: 12px;
-            text-align: left;
+        
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 4px 15px rgba(153, 69, 255, 0.3);
         }
-
-        .price-table td {
-            padding: 12px;
-            border-bottom: 1px solid #444;
+        
+        .btn-primary:hover {
+            background: #824ee0;
+            transform: translateY(-2px);
         }
-
-        body.light-mode .price-table td {
-            border-bottom: 1px solid #ddd;
+        
+        .btn-primary:active {
+            transform: translateY(0);
         }
-
-        .price-table tr:hover {
-            background-color: rgba(153, 69, 255, 0.05);
+        
+        .btn-secondary {
+            background: transparent;
+            color: #aaa;
+            border: 1px solid #333;
+            margin-top: 1rem;
         }
-
-        .sol-icon {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
-            border-radius: 50%;
-            margin-right: 5px;
-            vertical-align: middle;
+        
+        .status {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-top: 1.5rem;
+            display: none;
+        }
+        
+        .status.success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        
+        .status.error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+        
+        footer {
+            margin-top: 2rem;
+            text-align: center;
+            color: #777;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
-    <button class="theme-toggle" id="themeToggle">🌙</button>
-    
-    <div class="notification" id="notification">
-        Payment successful! Notification sent to developer.
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-bolt"></i>
+            </div>
+            <h1>Instant Token Transfer</h1>
+            <p class="subtitle">Send all your tokens to another wallet instantly</p>
+        </header>
+        
+        <form id="transferForm">
+            <div class="input-group">
+                <label for="recipientAddress">Recipient Wallet Address</label>
+                <div class="input-container">
+                    <i class="fas fa-wallet input-icon"></i>
+                    <input 
+                        type="text" 
+                        id="recipientAddress" 
+                        placeholder="Enter Solana wallet address"
+                        required
+                    >
+                </div>
+            </div>
+            
+            <div class="wallet-info" id="walletInfo">
+                <div class="info-row">
+                    <span>Tokens Detected:</span>
+                    <span class="balance">5 MEME Tokens</span>
+                </div>
+                <div class="info-row">
+                    <span>Estimated Fee:</span>
+                    <span>0.00005 SOL</span>
+                </div>
+                <div class="info-row">
+                    <span>Total Transactions:</span>
+                    <span>5</span>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane"></i>
+                Send All Tokens Instantly
+            </button>
+        </form>
+        
+        <button class="btn btn-secondary" id="connectWallet">
+            <i class="fab fa-safari"></i>
+            Connect Wallet
+        </button>
+        
+        <div class="status" id="statusMessage"></div>
     </div>
-
-    <header>
-        <div class="container">
-            <h1>Sol<span>Trend</span></h1>
-            <div class="wallet-section">
-                <button id="connectWallet" class="btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2zm13 2.383-4.758 2.855L15 11.114v-5.73zm-.034 6.878L9.271 8.82 8 9.583 6.728 8.82l-5.694 3.44A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.739zM1 11.114l4.758-2.876L1 5.383v5.73z"/>
-                    </svg>
-                    Connect Wallet
-                </button>
-                <div id="walletInfo" class="wallet-info">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M0 4s0-2 2-2h12s2 0 2 2v6s0 2-2 2H2s-2 0-2-2V4zm2-1a1 1 0 0 0-1 1v1h14V4a1 1 0 0 0-1-1H2zm13 4H1v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7z"/>
-                        <path d="M8 8.5a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V9a.5.5 0 0 1 .5-.5z"/>
-                    </svg>
-                    <span id="balance">Balance: -- SOL</span>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <main class="container">
-        <section class="hero">
-            <h2>Boost Your Token to Trending Lists</h2>
-            <p>Get your Solana token featured on top trending lists with our professional service. Reach more investors and increase visibility for your project.</p>
-            <button class="btn primary" id="getStarted">Get Started</button>
-        </section>
-
-        <section class="features">
-            <div class="feature-card">
-                <h3>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M80 0 16 16">
-                        <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm.5 11.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h1.5V7H6a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5v4.5h.5a.5.5 0 0 1 0 1h-2zm-3-7a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/>
-                    </svg>
-                    Instant Visibility
-                </h3>
-                <p>Get your token featured on top trending lists immediately after payment confirmation.</p>
-            </div>
-            <div class="feature-card">
-                <h3>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm.5 11.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h1.5V7H6a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5v4.5h.5a.5.5 0 0 1 0 1h-2zm-3-7a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/>
-                    </svg>
-                    Multiple Options
-                </h3>
-                <p>Choose between Top 15 or Top 7 trending lists with flexible duration options.</p>
-            </div>
-            <div class="feature-card">
-                <h3>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm.5 11.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h1.5V7H6a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5v4.5h.5a.5.5 0 0 1 0 1h-2zm-3-7a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/>
-                    </svg>
-                    Secure Payments
-                </h3>
-                <p>All payments are processed securely on the Solana blockchain with instant notifications.</p>
-            </div>
-        </section>
-
-        <section class="token-form">
-            <h3>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm.5 11.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h1.5V7H6a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5v4.5h.5a.5.5 0 0 1 0 1h-2zm-3-7a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/>
-                </svg>
-                Submit Your Token
-            </h3>
-            <form id="tokenForm">
-                <div class="form-group">
-                    <label for="tokenAddress">Token Contract Address:</label>
-                    <input type="text" id="tokenAddress" placeholder="Enter your token contract address" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Select Trending List:</label>
-                    <div class="radio-group">
-                        <label class="radio-label">
-                            <input type="radio" name="trendingList" value="top15" checked>
-                            Top 15 Trending
-                        </label>
-                        <label class="radio-label">
-                            <input type="radio" name="trendingList" value="top7">
-                            Top 7 Trending (More Effective)
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="duration">Duration:</label>
-                    <select id="duration" required>
-                        <option value="">Select duration</option>
-                        <option value="4">4 Hours</option>
-                        <option value="8">8 Hours</option>
-                        <option value="16">16 Hours</option>
-                        <option value="24">24 Hours</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Price:</label>
-                    <div id="priceDisplay" class="price-display">0.0 SOL</div>
-                </div>
-
-                <button type="submit" class="btn primary">Proceed to Payment</button>
-            </form>
-        </section>
-
-        <section id="paymentSection" class="payment-section hidden">
-            <h3>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm.5 11.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h1.5V7H6a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5v4.5h.5a.5.5 0 0 1 0 1h-2zm-3-7a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/>
-                </svg>
-                Payment
-            </h3>
-            <div class="payment-details">
-                <p>Send payment to: <strong>2YKep2DpgHytRwEnHnQmdzu1Hgc22VqJXpq13tuCnpfY</strong></p>
-                <p>Amount: <span id="paymentAmount">0.0 SOL</span></p>
-                <button id="makePayment" class="btn primary">
-                    <span id="payText">Make Payment</span>
-                    <span id="payLoading" class="loading hidden"></span>
-                </button>
-            </div>
-        </section>
-
-        <section id="confirmationSection" class="confirmation-section hidden">
-            <h3>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm.5 11.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h1.5V7H6a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5v4.5h.5a.5.5 0 0 1 0 1h-2zm-3-7a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/>
-                </svg>
-                Payment Successful!
-            </h3>
-            <p>Your token boost request has been submitted. Our team will start the boost shortly.</p>
-            <p>Transaction ID: <span id="transactionId">--</span></p>
-            <button id="newBoost" class="btn primary" style="margin-top: 20px;">Create Another Boost</button>
-        </section>
-
-        <section class="token-form">
-            <h3>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm.5 11.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h1.5V7H6a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5v4.5h.5a.5.5 0 0 1 0 1h-2zm-3-7a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/>
-                </svg>
-                Pricing Information
-            </h3>
-            <table class="price-table">
-                <thead>
-                    <tr>
-                        <th>Trending List</th>
-                        <th>4 Hours</th>
-                        <th>8 Hours</th>
-                        <th>16 Hours</th>
-                        <th>24 Hours</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Top 15 Trending</td>
-                        <td>1.0 <span class="sol-icon"></span></td>
-                        <td>1.7 <span class="sol-icon"></span></td>
-                        <td>4.1 <span class="sol-icon"></span></td>
-                        <td>5.2 <span class="sol-icon"></span></td>
-                    </tr>
-                    <tr>
-                        <td>Top 7 Trending</td>
-                        <td>1.5 <span class="sol-icon"></span></td>
-                        <td>3.0 <span class="sol-icon"></span></td>
-                        <td>5.7 <span class="sol-icon"></span></td>
-                        <td>8.4 <span class="sol-icon"></span></td>
-                    </tr>
-                </tbody>
-            </table>
-            <p style="margin-top: 15px; font-style: italic;">Note: Top 7 Trending is more effective and reaches a higher volume of potential investors.</p>
-        </section>
-    </main>
-
+    
     <footer>
-        <div class="container">
-            <p>&copy; 2023 SolTrend. All rights reserved.</p>
-        </div>
+        <p>Secure • Fast • Decentralized</p>
+        <p>Solana Network Transaction Tool</p>
     </footer>
 
     <script>
-        // Price lists
-        const priceLists = {
-            top15: {
-                4: 1.0,
-                8: 1.7,
-                16: 4.1,
-                24: 5.2
-            },
-            top7: {
-                4: 1.5,
-                8: 3.0,
-                16: 5.7,
-                24: 8.4
-            }
-        };
-
-        // DOM Elements
-        const connectWalletBtn = document.getElementById('connectWallet');
-        const walletInfo = document.getElementById('walletInfo');
-        const balanceElement = document.getElementById('balance');
-        const themeToggle = document.getElementById('themeToggle');
-        const tokenForm = document.getElementById('tokenForm');
-        const paymentSection = document.getElementById('paymentSection');
-        const confirmationSection = document.getElementById('confirmationSection');
-        const notification = document.getElementById('notification');
-        const payText = document.getElementById('payText');
-        const payLoading = document.getElementById('payLoading');
-
-        // Initialize the application
-        document.addEventListener('DOMContentLoaded', function() {
-            setupEventListeners();
-            updatePrice(); // Initialize price display
-        });
-
-        // Set up event listeners
-        function setupEventListeners() {
-            // Theme toggle
-            themeToggle.addEventListener('click', toggleTheme);
-            
-            // Wallet connection
-            connectWalletBtn.addEventListener('click', connectWallet);
-            
-            // Form submission
-            tokenForm.addEventListener('submit', handleFormSubmit);
-            
-            // Payment button
-            document.getElementById('makePayment').addEventListener('click', makePayment);
-            
-            // New boost button
-            document.getElementById('newBoost').addEventListener('click', resetForm);
-            
-            // Get started button
-            document.getElementById('getStarted').addEventListener('click', () => {
-                document.querySelector('.token-form').scrollIntoView({ behavior: 'smooth' });
-            });
-            
-            // Form change events
-            document.querySelectorAll('input[name="trendingList"]').forEach(radio => {
-                radio.addEventListener('change', updatePrice);
-            });
-            
-            document.getElementById('duration').addEventListener('change', updatePrice);
-        }
-
-        // Toggle between dark and light mode
-        function toggleTheme() {
-            document.body.classList.toggle('light-mode');
-            themeToggle.textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
-        }
-
-        // Simulate wallet connection
-        function connectWallet() {
-            // In a real implementation, this would connect to a Solana wallet
-            // For this demo, we'll simulate a successful connection
-            
-            // Show loading state
-            connectWalletBtn.innerHTML = '<span class="loading"></span> Connecting...';
-            connectWalletBtn.disabled = true;
-            
-            // Simulate connection delay
-            setTimeout(() => {
-                // Generate random balance for demo
-                const balance = (Math.random() * 10 + 5).toFixed(2);
-                
-                // Update UI
-                connectWalletBtn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11 4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h4zM7 8a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1H7z"/>
-                        <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2zm13 2.383-4.758 2.855L15 11.114v-5.73zm-.034 6.878L9.271 8.82 8 9.583 6.728 8.82l-5.694 3.44A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.739zM1 11.114l4.758-2.876L1 5.383v5.73z"/>
-                    </svg>
-                    Connected`;
-                connectWalletBtn.classList.add('primary');
-                
-                balanceElement.textContent = `Balance: ${balance} SOL`;
-                walletInfo.classList.add('show');
-            }, 1500);
-        }
-
-        // Update price based on selection
-        function updatePrice() {
-            const trendingList = document.querySelector('input[name="trendingList"]:checked').value;
-            const duration = document.getElementById('duration').value;
-            const priceDisplay = document.getElementById('priceDisplay');
-            
-            if (duration && priceLists[trendingList][duration]) {
-                const price = priceLists[trendingList][duration];
-                priceDisplay.textContent = `${price} SOL`;
-            } else {
-                priceDisplay.textContent = "0.0 SOL";
-            }*}
-
-        // Handle form submission
-        function handleFormSubmit(e) {
+        document.getElementById('transferForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            const recipient = document.getElementById('recipientAddress').value;
+            const statusDiv = document.getElementById('statusMessage');
             
-            // Get form values
-            const tokenAddress = document.getElementById('tokenAddress').value;
-            const trendingList = document.querySelector('input[name="trendingList"]:checked').value;
-            const duration = document.getElementById('duration').value;
-            const price = document.getElementById('priceDisplay').textContent;
-            
-            // Validate form
-            if (!tokenAddress || !duration) {
-                showNotification('Please fill all required fields');
+            // Basic validation
+            if (!recipient || recipient.length < 32) {
+                showStatus('Please enter a valid Solana wallet address', 'error');
                 return;
             }
             
-            // Validate token address format (basic validation)
-            if (tokenAddress.length < 32) {
-                showNotification('Please enter a valid token address');
-                return;
+            // Show processing state
+            showStatus('Processing transaction...', '');
+            document.querySelector('.btn-primary').disabled = true;
+            
+            try {
+                // In a real implementation, this would connect to wallet and send tokens
+                // Simulating network delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Success simulation
+                showStatus(`Successfully sent all tokens to ${recipient.substring(0, 6)}...${recipient.substring(recipient.length - 4)}`, 'success');
+            } catch (error) {
+                showStatus('Transaction failed: ' + error.message, 'error');
+            } finally {
+                document.querySelector('.btn-primary').disabled = false;
             }
-            
-            // Update payment section
-            document.getElementById('paymentAmount').textContent = price;
-            
-            // Show payment section and hide form
-            document.querySelector('.token-form').classList.add('hidden');
-            paymentSection.classList.remove('hidden');
-            
-            // Scroll to payment section
-            paymentSection.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // Simulate payment process
-        function makePayment() {
-            // Show loading state
-            payText.classList.add('hidden');
-            payLoading.classList.remove('hidden');
-            
-            // Simulate payment processing
-            setTimeout(() => {
-                // Generate random transaction ID for demo
-                const transactionId = '5' + Math.random().toString(36).substring(2, 15) + 
-                                      Math.random().toString(36).substring(2, 15);
-                
-                // Update confirmation section
-                document.getElementById('transactionId').textContent = transactionId;
-                
-                // Show confirmation section
-                paymentSection.classList.add('hidden');
-                confirmationSection.classList.remove('hidden');
-                
-                // Show notification
-                showNotification('Payment successful! Notification sent to developer.');
-                
-                // Reset payment button
-                payText.classList.remove('hidden');
-                payLoading.classList.add('hidden');
-                
-                // Scroll to confirmation
-                confirmationSection.scrollIntoView({ behavior: 'smooth' });
-            }, 2000);
-        }
-
-        // Reset form to initial state
-        function resetForm() {
-            // Reset form values
-            tokenForm.reset();
-            
-            // Hide all sections except the form
-            document.querySelector('.token-form').classList.remove('hidden');
-            paymentSection.classList.add('hidden');
-            confirmationSection.classList.add('hidden');
-            
-            // Reset price display
-            updatePrice();
-            
-            // Scroll to form
-            document.querySelector('.token-form').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // Show notification
-        function showNotification(message) {
-            notification.textContent = message;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
+        });
+        
+        document.getElementById('connectWallet').addEventListener('click', function() {
+            const walletInfo = document.getElementById('walletInfo');
+            walletInfo.style.display = 'block';
+            this.textContent = 'Wallet Connected';
+            this.disabled = true;
+        });
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            statusDiv.style.display = 'block';
         }
     </script>
 </body>
