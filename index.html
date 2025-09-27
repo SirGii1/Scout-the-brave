@@ -3,229 +3,450 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solana Fast Transfer</title>
+    <title>Solana Fast Transfer - Professional Wallet Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'dark-bg': '#0a0a0a',
-                        'dark-card': '#1a1a1a',
-                        'dark-border': '#2a2a2a',
-                        'accent': '#00d4aa',
-                        'accent-hover': '#00b894'
-                    }
-                }
-            }
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-base@latest/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-phantom@latest/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-solflare@latest/lib/index.iife.min.js"></script>
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-    </script>
+        .gradient-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+        }
+        .pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 20px rgba(20, 184, 166, 0.3); }
+            to { box-shadow: 0 0 30px rgba(20, 184, 166, 0.6); }
+        }
+        .token-item {
+            transition: all 0.3s ease;
+        }
+        .token-item:hover {
+            background: rgba(20, 184, 166, 0.1);
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
-<body class="bg-dark-bg text-white min-h-screen font-sans">
-    <div class="container mx-auto px-4 py-8 max-w-2xl">
+<body class="gradient-bg min-h-screen text-white font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
         <!-- Header -->
-        <div class="text-center mb-12">
+        <div class="text-center mb-8">
             <div class="flex items-center justify-center mb-4">
-                <svg class="w-12 h-12 text-accent mr-3" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
-                <h1 class="text-3xl font-bold">Solana Fast Transfer</h1>
+                <i class="fas fa-rocket text-4xl text-teal-400 mr-3"></i>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-teal-400 to-cyan-300 bg-clip-text text-transparent">
+                    Solana Fast Transfer
+                </h1>
             </div>
-            <p class="text-gray-400 text-lg">Send all your tokens instantly to any wallet</p>
+            <p class="text-gray-300 text-lg">Professional memecoin wallet transaction tool</p>
         </div>
 
-        <!-- Main Card -->
-        <div class="bg-dark-card border border-dark-border rounded-2xl p-8 shadow-2xl">
-            <!-- Wallet Connection Status -->
-            <div class="mb-8 p-4 bg-dark-bg rounded-xl border border-dark-border">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <svg class="w-6 h-6 text-red-500 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 6v6l4 2"/>
-                        </svg>
-                        <span class="text-gray-300">Wallet Status:</span>
+        <!-- Wallet Connection Status -->
+        <div class="glass-effect rounded-2xl p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div id="connection-status" class="w-3 h-3 rounded-full bg-red-500 mr-3"></div>
+                    <span id="wallet-status" class="text-lg font-medium">Wallet Disconnected</span>
+                </div>
+                <button id="connect-wallet" class="bg-teal-500 hover:bg-teal-600 px-6 py-2 rounded-lg font-medium transition-colors">
+                    <i class="fas fa-wallet mr-2"></i>Connect Wallet
+                </button>
+            </div>
+            <div id="wallet-info" class="mt-4 hidden">
+                <div class="text-sm text-gray-400">Connected Address:</div>
+                <div id="wallet-address" class="font-mono text-teal-400"></div>
+            </div>
+        </div>
+
+        <!-- Balance & Portfolio -->
+        <div id="portfolio-section" class="hidden mb-6">
+            <div class="glass-effect rounded-2xl p-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-chart-pie text-teal-400 mr-2"></i>
+                    Portfolio Overview
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <div class="text-sm text-gray-400">SOL Balance</div>
+                        <div id="sol-balance" class="text-2xl font-bold text-white">0.00</div>
                     </div>
-                    <span class="text-red-400 font-medium" id="walletStatus">Not Connected</span>
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <div class="text-sm text-gray-400">Total Tokens</div>
+                        <div id="token-count" class="text-2xl font-bold text-teal-400">0</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <div class="text-sm text-gray-400">Network</div>
+                        <div class="text-2xl font-bold text-purple-400">Mainnet</div>
+                    </div>
+                </div>
+                
+                <!-- Token List -->
+                <div id="token-list" class="space-y-2">
+                    <div class="text-sm text-gray-400 mb-2">Your Tokens:</div>
+                    <div id="tokens-container" class="max-h-60 overflow-y-auto space-y-2">
+                        <!-- Tokens will be populated here -->
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Connect Wallet Button -->
-            <button id="connectWallet" class="w-full mb-8 bg-accent hover:bg-accent-hover text-dark-bg font-semibold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center">
-                <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1"/>
-                    <polyline points="15,10 21,10 21,14 15,14"/>
-                </svg>
-                Connect Wallet
-            </button>
-
-            <!-- Transfer Form -->
-            <form id="transferForm" class="space-y-6">
-                <!-- Destination Address -->
-                <div>
-                    <label for="destinationAddress" class="block text-sm font-medium text-gray-300 mb-3">
-                        Destination Wallet Address
-                    </label>
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            id="destinationAddress" 
-                            placeholder="Enter Solana wallet address (44 characters)"
-                            class="w-full bg-dark-bg border border-dark-border rounded-xl px-4 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-200"
-                            required
-                        >
-                        <svg class="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                        </svg>
+        <!-- Transfer Section -->
+        <div id="transfer-section" class="hidden">
+            <div class="glass-effect rounded-2xl p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-paper-plane text-teal-400 mr-2"></i>
+                    Fast Transfer
+                </h3>
+                
+                <form id="transfer-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">
+                            Recipient Wallet Address
+                        </label>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="recipient-address"
+                                placeholder="Enter Solana wallet address..."
+                                class="w-full bg-gray-800/50 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-teal-400 focus:outline-none transition-colors"
+                                required
+                            >
+                            <button type="button" class="absolute right-3 top-3 text-gray-400 hover:text-teal-400">
+                                <i class="fas fa-qrcode"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Token Balance Display -->
-                <div class="bg-dark-bg rounded-xl p-6 border border-dark-border">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-200">Available Tokens</h3>
-                        <button type="button" id="refreshBalance" class="text-accent hover:text-accent-hover transition-colors">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                            </svg>
+                    <div class="bg-gray-800/30 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400">Transfer Mode:</span>
+                            <span class="bg-teal-500 text-white px-3 py-1 rounded-full text-xs font-medium pulse-glow">
+                                FAST
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            All tokens will be transferred in a single optimized transaction
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-exclamation-triangle text-yellow-400 mr-2 mt-1"></i>
+                            <div class="text-sm text-yellow-200">
+                                <strong>Security Notice:</strong> This will transfer ALL your tokens to the specified address. 
+                                Please verify the recipient address carefully before proceeding.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4">
+                        <div class="text-sm text-gray-400">
+                            <i class="fas fa-gas-pump mr-1"></i>
+                            Network Fee: ~0.005 SOL
+                        </div>
+                        <button 
+                            type="submit" 
+                            id="send-button"
+                            class="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 px-8 py-3 rounded-lg font-medium transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled
+                        >
+                            <i class="fas fa-rocket mr-2"></i>
+                            Send All Tokens
                         </button>
                     </div>
-                    <div id="tokenList" class="space-y-3">
-                        <div class="text-gray-400 text-center py-4">
-                            Connect wallet to view token balances
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Transaction Settings -->
-                <div class="bg-dark-bg rounded-xl p-6 border border-dark-border">
-                    <h3 class="text-lg font-semibold text-gray-200 mb-4">Transaction Settings</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-2">Priority Fee</label>
-                            <select class="w-full bg-dark-card border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-accent">
-                                <option value="normal">Normal</option>
-                                <option value="high" selected>High</option>
-                                <option value="turbo">Turbo</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-2">Slippage</label>
-                            <select class="w-full bg-dark-card border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-accent">
-                                <option value="0.5">0.5%</option>
-                                <option value="1" selected>1%</option>
-                                <option value="3">3%</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Send Button -->
-                <button 
-                    type="submit" 
-                    id="sendButton"
-                    disabled
-                    class="w-full bg-accent hover:bg-accent-hover disabled:bg-gray-600 disabled:cursor-not-allowed text-dark-bg font-bold py-5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center text-lg"
-                >
-                    <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                    </svg>
-                    Send All Tokens
-                </button>
-            </form>
-
-            <!-- Transaction Status -->
-            <div id="transactionStatus" class="mt-6 p-4 rounded-xl border hidden">
-                <div class="flex items-center">
-                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-accent mr-3"></div>
-                    <span>Processing transaction...</span>
-                </div>
+                </form>
             </div>
         </div>
 
-        <!-- Security Notice -->
-        <div class="mt-8 p-6 bg-yellow-900/20 border border-yellow-600/30 rounded-xl">
-            <div class="flex items-start">
-                <svg class="w-6 h-6 text-yellow-500 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-                </svg>
-                <div>
-                    <h4 class="text-yellow-400 font-semibold mb-2">Security Notice</h4>
-                    <p class="text-yellow-200 text-sm">
-                        Always verify the destination address before sending. Transactions on Solana are irreversible. 
-                        This tool will transfer ALL tokens from your wallet to the specified address.
-                    </p>
+        <!-- Transaction Status -->
+        <div id="transaction-status" class="hidden glass-effect rounded-2xl p-6">
+            <div class="text-center">
+                <div id="tx-spinner" class="hidden">
+                    <i class="fas fa-spinner fa-spin text-4xl text-teal-400 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Processing Transaction...</h3>
+                    <p class="text-gray-400">Please confirm the transaction in your wallet</p>
+                </div>
+                <div id="tx-success" class="hidden">
+                    <i class="fas fa-check-circle text-4xl text-green-400 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Transaction Successful!</h3>
+                    <p class="text-gray-400 mb-4">All tokens have been transferred successfully</p>
+                    <div id="tx-signature" class="bg-gray-800/50 rounded-lg p-3 font-mono text-sm break-all"></div>
+                </div>
+                <div id="tx-error" class="hidden">
+                    <i class="fas fa-times-circle text-4xl text-red-400 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Transaction Failed</h3>
+                    <p id="error-message" class="text-gray-400"></p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Basic UI interactions (actual Solana integration would require @solana/web3.js)
-        document.getElementById('connectWallet').addEventListener('click', function() {
-            // Simulate wallet connection
-            document.getElementById('walletStatus').textContent = 'Connected';
-            document.getElementById('walletStatus').className = 'text-green-400 font-medium';
-            document.getElementById('sendButton').disabled = false;
-            
-            // Simulate token list
-            document.getElementById('tokenList').innerHTML = `
-                <div class="flex justify-between items-center p-3 bg-dark-card rounded-lg">
-                    <span class="text-gray-300">SOL</span>
-                    <span class="text-white font-medium">2.45 SOL</span>
-                </div>
-                <div class="flex justify-between items-center p-3 bg-dark-card rounded-lg">
-                    <span class="text-gray-300">USDC</span>
-                    <span class="text-white font-medium">150.00 USDC</span>
-                </div>
-                <div class="flex justify-between items-center p-3 bg-dark-card rounded-lg">
-                    <span class="text-gray-300">BONK</span>
-                    <span class="text-white font-medium">1,000,000 BONK</span>
-                </div>
-            `;
-        });
+        // Solana connection and wallet management
+        let connection;
+        let wallet = null;
+        let walletAdapter = null;
 
-        document.getElementById('transferForm').addEventListener('submit', function(e) {
+        // Initialize Solana connection
+        function initializeSolana() {
+            connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+            console.log('[v0] Solana connection initialized');
+        }
+
+        // Wallet connection functions
+        async function connectWallet() {
+            try {
+                // Check if Phantom wallet is available
+                if (window.solana && window.solana.isPhantom) {
+                    const response = await window.solana.connect();
+                    wallet = response.publicKey.toString();
+                    updateWalletUI(true, wallet);
+                    await loadPortfolio();
+                } else {
+                    alert('Please install Phantom wallet to continue');
+                }
+            } catch (error) {
+                console.error('[v0] Wallet connection error:', error);
+                alert('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        // Update wallet UI
+        function updateWalletUI(connected, address = null) {
+            const statusDot = document.getElementById('connection-status');
+            const statusText = document.getElementById('wallet-status');
+            const connectButton = document.getElementById('connect-wallet');
+            const walletInfo = document.getElementById('wallet-info');
+            const walletAddress = document.getElementById('wallet-address');
+            const portfolioSection = document.getElementById('portfolio-section');
+            const transferSection = document.getElementById('transfer-section');
+            const sendButton = document.getElementById('send-button');
+
+            if (connected && address) {
+                statusDot.className = 'w-3 h-3 rounded-full bg-green-500 mr-3';
+                statusText.textContent = 'Wallet Connected';
+                connectButton.innerHTML = '<i class="fas fa-sign-out-alt mr-2"></i>Disconnect';
+                connectButton.onclick = disconnectWallet;
+                walletInfo.classList.remove('hidden');
+                walletAddress.textContent = `${address.slice(0, 8)}...${address.slice(-8)}`;
+                portfolioSection.classList.remove('hidden');
+                transferSection.classList.remove('hidden');
+                sendButton.disabled = false;
+            } else {
+                statusDot.className = 'w-3 h-3 rounded-full bg-red-500 mr-3';
+                statusText.textContent = 'Wallet Disconnected';
+                connectButton.innerHTML = '<i class="fas fa-wallet mr-2"></i>Connect Wallet';
+                connectButton.onclick = connectWallet;
+                walletInfo.classList.add('hidden');
+                portfolioSection.classList.add('hidden');
+                transferSection.classList.add('hidden');
+                sendButton.disabled = true;
+            }
+        }
+
+        // Disconnect wallet
+        async function disconnectWallet() {
+            try {
+                if (window.solana) {
+                    await window.solana.disconnect();
+                }
+                wallet = null;
+                updateWalletUI(false);
+            } catch (error) {
+                console.error('[v0] Disconnect error:', error);
+            }
+        }
+
+        // Load portfolio data
+        async function loadPortfolio() {
+            if (!wallet || !connection) return;
+
+            try {
+                const publicKey = new solanaWeb3.PublicKey(wallet);
+                
+                // Get SOL balance
+                const balance = await connection.getBalance(publicKey);
+                const solBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
+                document.getElementById('sol-balance').textContent = solBalance.toFixed(4);
+
+                // Get token accounts
+                const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+                    programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+                });
+
+                const tokens = tokenAccounts.value.filter(account => 
+                    account.account.data.parsed.info.tokenAmount.uiAmount > 0
+                );
+
+                document.getElementById('token-count').textContent = tokens.length;
+
+                // Display tokens
+                const tokensContainer = document.getElementById('tokens-container');
+                tokensContainer.innerHTML = '';
+
+                if (tokens.length === 0) {
+                    tokensContainer.innerHTML = '<div class="text-gray-500 text-center py-4">No tokens found</div>';
+                } else {
+                    tokens.forEach(token => {
+                        const tokenInfo = token.account.data.parsed.info;
+                        const tokenDiv = document.createElement('div');
+                        tokenDiv.className = 'token-item bg-gray-800/30 rounded-lg p-3 flex justify-between items-center';
+                        tokenDiv.innerHTML = `
+                            <div>
+                                <div class="font-medium">${tokenInfo.mint.slice(0, 8)}...${tokenInfo.mint.slice(-8)}</div>
+                                <div class="text-sm text-gray-400">Balance: ${tokenInfo.tokenAmount.uiAmount}</div>
+                            </div>
+                            <i class="fas fa-coins text-teal-400"></i>
+                        `;
+                        tokensContainer.appendChild(tokenDiv);
+                    });
+                }
+
+            } catch (error) {
+                console.error('[v0] Portfolio loading error:', error);
+                document.getElementById('tokens-container').innerHTML = 
+                    '<div class="text-red-400 text-center py-4">Error loading portfolio</div>';
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('transfer-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const address = document.getElementById('destinationAddress').value;
             
-            if (address.length !== 44) {
-                alert('Please enter a valid Solana wallet address (44 characters)');
+            const recipientAddress = document.getElementById('recipient-address').value.trim();
+            
+            if (!recipientAddress) {
+                alert('Please enter a recipient address');
                 return;
             }
 
-            // Show transaction status
-            const statusDiv = document.getElementById('transactionStatus');
-            statusDiv.classList.remove('hidden');
-            statusDiv.className = 'mt-6 p-4 rounded-xl border bg-blue-900/20 border-blue-600/30';
-            
-            // Simulate transaction processing
-            setTimeout(() => {
-                statusDiv.innerHTML = `
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span class="text-green-400">Transaction completed successfully!</span>
-                    </div>
-                `;
-                statusDiv.className = 'mt-6 p-4 rounded-xl border bg-green-900/20 border-green-600/30';
-            }, 3000);
+            try {
+                // Validate recipient address
+                new solanaWeb3.PublicKey(recipientAddress);
+            } catch (error) {
+                alert('Invalid Solana address');
+                return;
+            }
+
+            if (confirm('Are you sure you want to transfer ALL your tokens to this address? This action cannot be undone.')) {
+                await executeTransfer(recipientAddress);
+            }
         });
 
-        // Address validation
-        document.getElementById('destinationAddress').addEventListener('input', function(e) {
-            const address = e.target.value;
-            const button = document.getElementById('sendButton');
-            
-            if (address.length === 44) {
-                e.target.classList.remove('border-red-500');
-                e.target.classList.add('border-green-500');
-            } else if (address.length > 0) {
-                e.target.classList.remove('border-green-500');
-                e.target.classList.add('border-red-500');
-            } else {
-                e.target.classList.remove('border-red-500', 'border-green-500');
+        // Execute transfer
+        async function executeTransfer(recipientAddress) {
+            const txStatus = document.getElementById('transaction-status');
+            const txSpinner = document.getElementById('tx-spinner');
+            const txSuccess = document.getElementById('tx-success');
+            const txError = document.getElementById('tx-error');
+
+            // Show transaction status
+            txStatus.classList.remove('hidden');
+            txSpinner.classList.remove('hidden');
+            txSuccess.classList.add('hidden');
+            txError.classList.add('hidden');
+
+            try {
+                const publicKey = new solanaWeb3.PublicKey(wallet);
+                const recipientPublicKey = new solanaWeb3.PublicKey(recipientAddress);
+
+                // Get token accounts
+                const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+                    programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+                });
+
+                const transaction = new solanaWeb3.Transaction();
+                
+                // Add token transfers to transaction
+                for (const tokenAccount of tokenAccounts.value) {
+                    const tokenInfo = tokenAccount.account.data.parsed.info;
+                    if (tokenInfo.tokenAmount.uiAmount > 0) {
+                        // Create associated token account for recipient if needed
+                        const recipientTokenAccount = await solanaWeb3.getAssociatedTokenAddress(
+                            new solanaWeb3.PublicKey(tokenInfo.mint),
+                            recipientPublicKey
+                        );
+
+                        // Add transfer instruction
+                        transaction.add(
+                            solanaWeb3.createTransferInstruction(
+                                tokenAccount.pubkey,
+                                recipientTokenAccount,
+                                publicKey,
+                                tokenInfo.tokenAmount.amount
+                            )
+                        );
+                    }
+                }
+
+                // Also transfer SOL (keep small amount for fees)
+                const balance = await connection.getBalance(publicKey);
+                const transferAmount = balance - 10000; // Keep 0.00001 SOL for fees
+                
+                if (transferAmount > 0) {
+                    transaction.add(
+                        solanaWeb3.SystemProgram.transfer({
+                            fromPubkey: publicKey,
+                            toPubkey: recipientPublicKey,
+                            lamports: transferAmount
+                        })
+                    );
+                }
+
+                // Sign and send transaction
+                const { blockhash } = await connection.getRecentBlockhash();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = publicKey;
+
+                const signedTransaction = await window.solana.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+                
+                // Wait for confirmation
+                await connection.confirmTransaction(signature);
+
+                // Show success
+                txSpinner.classList.add('hidden');
+                txSuccess.classList.remove('hidden');
+                document.getElementById('tx-signature').textContent = signature;
+
+                // Refresh portfolio
+                setTimeout(() => {
+                    loadPortfolio();
+                }, 2000);
+
+            } catch (error) {
+                console.error('[v0] Transfer error:', error);
+                txSpinner.classList.add('hidden');
+                txError.classList.remove('hidden');
+                document.getElementById('error-message').textContent = error.message;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSolana();
+            document.getElementById('connect-wallet').addEventListener('click', connectWallet);
+        });
+
+        // Auto-connect if wallet was previously connected
+        window.addEventListener('load', async () => {
+            if (window.solana && window.solana.isPhantom) {
+                try {
+                    const response = await window.solana.connect({ onlyIfTrusted: true });
+                    wallet = response.publicKey.toString();
+                    updateWalletUI(true, wallet);
+                    await loadPortfolio();
+                } catch (error) {
+                    // User hasn't connected before or rejected auto-connect
+                    console.log('[v0] Auto-connect not available');
+                }
             }
         });
     </script>
