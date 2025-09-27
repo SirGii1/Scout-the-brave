@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solana Token Transfer</title>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -131,6 +132,13 @@
         .info-row:last-child {
             border-bottom: none;
         }
+        
+        .connected-address {
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+            color: #9945ff;
+        }
     </style>
 </head>
 <body>
@@ -149,6 +157,10 @@
             </div>
             
             <div class="wallet-info" id="walletInfo">
+                <div class="info-row">
+                    <span>Connected Wallet:</span>
+                    <span id="walletAddress" class="connected-address">Not connected</span>
+                </div>
                 <div class="info-row">
                     <span>Tokens:</span>
                     <span id="tokenCount">0</span>
@@ -174,8 +186,7 @@
     <script>
         // Global variables
         let connection;
-        let wallet;
-        let provider;
+        let walletPublicKey;
         let tokenAccounts = [];
         
         // Initialize when page loads
@@ -186,6 +197,15 @@
                     'confirmed'
                 );
                 console.log('Connected to Solana');
+                
+                // Check if Phantom is already connected
+                if (window.solana && window.solana.isPhantom && window.solana.isConnected) {
+                    walletPublicKey = window.solana.publicKey;
+                    document.getElementById('connectWallet').textContent = 'Wallet Connected';
+                    document.getElementById('walletInfo').style.display = 'block';
+                    document.getElementById('walletAddress').textContent = walletPublicKey.toString();
+                    await getTokenAccounts();
+                }
             } catch (error) {
                 console.error('Connection error:', error);
                 showStatus('Network connection failed', 'error');
@@ -200,19 +220,18 @@
             
             try {
                 // Check for Phantom wallet
-                if (window.solana && window.solana.isPhantom) {
-                    provider = window.solana;
-                } else {
+                if (!(window.solana && window.solana.isPhantom)) {
                     throw new Error('Phantom wallet required. Get it at phantom.app');
                 }
                 
                 // Connect to wallet
-                const response = await provider.connect();
-                wallet = response.publicKey;
+                const response = await window.solana.connect();
+                walletPublicKey = response.publicKey;
                 
                 // Update UI
                 button.textContent = 'Wallet Connected';
                 document.getElementById('walletInfo').style.display = 'block';
+                document.getElementById('walletAddress').textContent = walletPublicKey.toString();
                 
                 // Get token accounts
                 await getTokenAccounts();
@@ -228,20 +247,21 @@
         
         // Get token accounts
         async function getTokenAccounts() {
-            if (!wallet) return;
+            if (!walletPublicKey) return;
             
             try {
-                const response = await connection.getTokenAccountsByOwner(
-                    wallet,
+                const response = await connection.getParsedTokenAccountsByOwner(
+                    walletPublicKey,
                     { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
                 );
                 
                 tokenAccounts = response.value.map(account => {
-                    const data = solanaWeb3.AccountLayout.decode(account.account.data);
+                    const data = account.account.data.parsed.info;
                     return {
                         pubkey: account.pubkey,
                         mint: new solanaWeb3.PublicKey(data.mint),
-                        amount: data.amount
+                        amount: data.tokenAmount.amount,
+                        decimals: data.tokenAmount.decimals
                     };
                 });
                 
@@ -259,7 +279,7 @@
         document.getElementById('transferForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            if (!wallet) {
+            if (!walletPublicKey) {
                 showStatus('Connect wallet first', 'error');
                 return;
             }
@@ -284,16 +304,11 @@
             try {
                 // Create transaction
                 const transaction = new solanaWeb3.Transaction();
-                const recentBlockhash = await connection.getRecentBlockhash();
-                transaction.recentBlockhash = recentBlockhash.blockhash;
-                transaction.feePayer = wallet;
                 
                 // Add token transfers
                 for (const tokenAccount of tokenAccounts) {
                     // Get recipient's associated token address
-                    const associatedTokenAddress = await solanaWeb3.Token.getAssociatedTokenAddress(
-                        solanaWeb3.ASSOCIATED_TOKEN_PROGRAM_ID,
-                        solanaWeb3.TOKEN_PROGRAM_ID,
+                    const associatedTokenAddress = await splToken.getAssociatedTokenAddress(
                         tokenAccount.mint,
                         recipientPubKey
                     );
@@ -303,46 +318,60 @@
                     
                     if (!accountInfo) {
                         // Create account if it doesn't exist
-                        const createInstruction = solanaWeb3.Token.createAssociatedTokenAccountInstruction(
-                            solanaWeb3.ASSOCIATED_TOKEN_PROGRAM_ID,
-                            solanaWeb3.TOKEN_PROGRAM_ID,
-                            tokenAccount.mint,
+                        const createInstruction = splToken.createAssociatedTokenAccountInstruction(
+                            walletPublicKey,
                             associatedTokenAddress,
                             recipientPubKey,
-                            wallet
+                            tokenAccount.mint
                         );
                         transaction.add(createInstruction);
                     }
                     
                     // Transfer tokens
-                    const transferInstruction = solanaWeb3.Token.createTransferInstruction(
-                        solanaWeb3.TOKEN_PROGRAM_ID,
+                    const transferInstruction = splToken.createTransferCheckedInstruction(
                         tokenAccount.pubkey,
+                        tokenAccount.mint,
                         associatedTokenAddress,
-                        wallet,
-                        [],
-                        tokenAccount.amount
+                        walletPublicKey,
+                        BigInt(tokenAccount.amount),
+                        tokenAccount.decimals
                     );
                     transaction.add(transferInstruction);
                 }
                 
-                // Sign and send transaction
-                const signedTransaction = await provider.signTransaction(transaction);
+                // Get recent blockhash
+                const { blockhash } = await connection.getLatestBlockhash();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = walletPublicKey;
+                
+                // Sign and send transaction using Phantom
+                const signedTransaction = await window.solana.signTransaction(transaction);
                 const signature = await connection.sendRawTransaction(signedTransaction.serialize());
                 
                 // Confirm transaction
-                await connection.confirmTransaction(signature, 'confirmed');
+                const confirmation = await connection.confirmTransaction({
+                    signature: signature,
+                    blockhash: blockhash,
+                    lastValidBlockHeight: await connection.getBlockHeight() + 150
+                });
+                
+                if (confirmation.value.err) {
+                    throw new Error('Transaction failed');
+                }
                 
                 // Update UI
-                showStatus(`Success! Tokens sent to ${recipientAddress.substring(0, 6)}...`, 'success');
+                showStatus(`Success! Tokens sent. Signature: ${signature.substring(0, 20)}...`, 'success');
                 sendButton.textContent = 'Transfer Complete!';
                 
                 // Reset form
                 document.getElementById('transferForm').reset();
                 
+                // Refresh token accounts
+                await getTokenAccounts();
+                
             } catch (error) {
                 console.error('Transfer error:', error);
-                showStatus(`Transfer failed: ${error.message}`, 'error');
+                showStatus(`Transfer failed: ${error.message || 'Unknown error'}`, 'error');
                 sendButton.textContent = originalText;
                 sendButton.disabled = false;
             }
